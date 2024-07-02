@@ -132,3 +132,149 @@ Cypress.Commands.add('waitUntil', function (innerFunction, options = {}) {
 
     return callFunction()
 })
+
+Cypress.Commands.add("login", (pagePath, failurehandler = () => {}) => {
+    const username = Cypress.env('AEM_AUTHOR_USERNAME') ? Cypress.env('AEM_AUTHOR_USERNAME') : "admin";
+    const password = Cypress.env('AEM_AUTHOR_PASSWORD') ? Cypress.env('AEM_AUTHOR_PASSWORD') : "admin";
+    cy.get('#username').type(username);
+    cy.get('#password').type(password);
+    let retryCount = 0;
+    let maxRetries = 3;
+    // Check if the element with id 'submit-button' exists
+    cy.get('body').then(($body) => {
+        const element = $body.find('#submit-button');
+        if (element.length === 0) {
+            // Element is not present
+            retryCount++;
+            if (retryCount <= maxRetries) {
+                // Retry the visit with an exponential backoff delay
+                const delay = Math.pow(2, retryCount - 1) * 1000; // 2^n seconds
+                cy.wait(delay);
+                failurehandler();
+            }
+        } else {
+            // Element is present, click it
+            cy.wrap(element).click();
+        }
+    });
+});
+
+Cypress.Commands.add("openPage", (pagePath, options = {}) => {
+    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : 'http://localhost:4503';
+    let path = ((contextPath && !pagePath.startsWith(contextPath)) ? `${contextPath}${pagePath.startsWith('/') ? '' : '/'}${pagePath}` : pagePath);
+    if (!options.noLogin) {
+        // getting status 403 intermittently, just ignore it
+        const baseUrl = contextPath;
+        cy.visit(baseUrl, {'failOnStatusCode': false});
+        cy.getCookie('login-token').then(cookie => {
+            if(!cookie) {
+                cy.login(baseUrl, () => {
+                    cy.openPage(path, options);
+                });
+            }
+        })
+    }
+    cy.visit(path, options);
+});
+
+Cypress.Commands.add("previewForm", (formPath, options = {}) => {
+    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : "";
+    let pagePath = contextPath ? `${contextPath}${formPath.startsWith('/') ? '' : '/'}${formPath}?wcmmode=disabled` : `${formPath}?wcmmode=disabled`;
+    if (options?.params) {
+        options.params.forEach((param) => pagePath += `&${param}`)
+        delete options.params
+    }
+    if(options?.multipleEmbedContainers) {
+        return cy.openPage(pagePath, options).then(() => waitForFormInitMultipleContiners(options?.multipleEmbedContainers))
+    }
+    if(options?.multipleContainers) {
+        return cy.openPage(pagePath, options).then(waitForFormInitMultipleContiners)
+    }
+    return cy.openPage(pagePath, options).then(waitForFormInit)
+})
+
+
+const waitForFormInit = () => {
+    const INIT_EVENT = "AF_FormContainerInitialised"
+    return cy.document().then(document => {
+        cy.get('form').then(($form) => {
+            const promise = new Cypress.Promise((resolve, reject) => {
+                const listener1 = e => {
+                    if(document.querySelector("[data-cmp-adaptiveform-container-loader='"+ $form[0].id + "']")?.classList.contains("cmp-adaptiveform-container--loading")){
+                        const isReady = () => {
+                            const container = document.querySelector("[data-cmp-adaptiveform-container-loader='"+ $form[0].id + "']");
+                            if (container &&
+                                e.detail._path === $form.data("cmp-path") &&
+                                !container.classList.contains("cmp-adaptiveform-container--loading")) {
+
+                                resolve(e.detail);
+                            }
+                            setTimeout(isReady, 0)
+                        }
+                        isReady();
+                    }
+                }
+                document.addEventListener(INIT_EVENT, listener1);
+            })
+            return promise
+        });
+    })
+}
+
+const waitForFormInitMultipleContiners = (multipleEmbedContainers) => {
+    const INIT_EVENT = "AF_FormContainerInitialised"
+    return cy.document().then(document => {
+        const promiseArray = []
+        cy.get('form').each(($form) => {
+            const promise = new Cypress.Promise((resolve, reject) => {
+                const listener1 = e => {
+                    if(document.querySelector("[data-cmp-adaptiveform-container-loader='"+ $form[0].id + "']")?.classList.contains("cmp-adaptiveform-container--loading")){
+                        const isReady = () => {
+                            const container = document.querySelector("[data-cmp-adaptiveform-container-loader='"+ $form[0].id + "']");
+                            if (container &&
+                                e.detail._path === $form.data("cmp-path") &&
+                                !container.classList.contains("cmp-adaptiveform-container--loading")) {
+
+                                resolve(e.detail);
+                            }
+                            setTimeout(isReady, 0)
+                        }
+                        isReady();
+                    }
+                }
+                document.addEventListener(INIT_EVENT, listener1);
+            })
+            if(typeof multipleEmbedContainers == "boolean" && multipleEmbedContainers){
+                promiseArray.push(new Cypress.Promise((resolve, reject) => {
+                    setTimeout(() => {
+                        resolve(promise);
+                    }, 1000);
+                }));
+            } else {
+                promiseArray.push(promise)
+            }
+        }).then(($lis) => {
+            if(typeof multipleEmbedContainers == "boolean" && multipleEmbedContainers) {
+                setTimeout(() => {
+                    return Promise.all(promiseArray);
+                }, 1000);
+            } else {
+                return Promise.all(promiseArray)
+            }
+        });
+    })
+}
+
+const waitForChildViewAddition = () => {
+    return cy.get('[data-cmp-is="adaptiveFormContainer"]')
+        .then((el) => {
+            const ADD_EVENT = "AF_PanelInstanceAdded";
+            const promise = new Cypress.Promise((resolve, reject) => {
+                const listener1 = e => {
+                    resolve(e.detail.formContainer);
+                };
+                el[0].addEventListener(ADD_EVENT, listener1);
+            })
+            return promise;
+        });
+}
