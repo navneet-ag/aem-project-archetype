@@ -37,22 +37,29 @@ describe('AEM Forms contact us form', () => {
 
     it('Field Validations should work', () => {
         expect(formContainer, "formcontainer is initialized").to.not.be.null;
+        // The field id for the name input and email input were identified from the model json.
         const nameInput = 'textinput-553834b35d';
         const emailInput = 'emailinput-0383a692af';
+        // The invalid value was identified from the regex in the pattern field from the model json.
         cy.get(`#${nameInput}`).type("123");
         cy.get(`#${nameInput}`).find("input").focus().blur().then(x => {
+            //The selector .cmp-adaptiveform-textinput__errormessage was identified using the id from the model json and finding that element in HTML.
             cy.get(`#${nameInput}`).find(".cmp-adaptiveform-textinput__errormessage").should('have.text',"Please enter a valid name.")
         })
+        // The invalid value was identified from the regex in the pattern field from the model json.
         cy.get(`#${emailInput}`).type("invalid email");
         cy.get(`#${emailInput}`).find("input").focus().blur().then(x => {
+            //The selector .cmp-adaptiveform-emailinput__errormessage was identified using the id from the model json and finding that element in HTML.
             cy.get(`#${emailInput}`).find(".cmp-adaptiveform-emailinput__errormessage").should('have.text',"Please enter a valid email.")
         })
     });
 
     it('Check salary hide/show behaviour', () => {
         expect(formContainer, "formcontainer is initialized").to.not.be.null;
+        // The field id for the salary input and employerDropDown were identified from the model json.
         const salaryInputId = "numberinput-6de71944e2";
         const employerDropDownId = "dropdown-7013aa122e";
+        // The hide and show behaviour was identified from the events property of the dropdown field in the model json.
         cy.get(`#${employerDropDownId} select`).select("Yes");
         cy.get(`#${salaryInputId}`).should('be.visible');
 
