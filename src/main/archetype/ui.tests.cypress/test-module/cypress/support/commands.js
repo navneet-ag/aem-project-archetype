@@ -160,7 +160,7 @@ Cypress.Commands.add("login", (pagePath, failurehandler = () => {}) => {
 });
 
 Cypress.Commands.add("openPage", (pagePath, options = {}) => {
-    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : 'http://localhost:4502';
+    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : 'http://localhost:4503';
     let path = ((contextPath && !pagePath.startsWith(contextPath)) ? `${contextPath}${pagePath.startsWith('/') ? '' : '/'}${pagePath}` : pagePath);
     if (!options.noLogin) {
         // getting status 403 intermittently, just ignore it
@@ -282,8 +282,8 @@ const waitForChildViewAddition = () => {
 const setFocus = (elementId, formContainer) => {
     cy.get(`#${elementId}`).should('exist');
     formContainer.setFocus(elementId);
-
 }
+
 Cypress.Commands.add("typeText", (elementId, text, formContainer,  options = {}) => {
     setFocus(elementId, formContainer);
     cy.get(`#${elementId}`).should('be.visible').type(text);
@@ -315,5 +315,19 @@ Cypress.Commands.add("checkElementVisibility", (elementId, isVisible, formContai
         cy.get(`#${elementId}`).should('be.visible');
     } else {
         cy.get(`#${elementId}`).should('not.be.visible');
+    }
+});
+
+Cypress.Commands.add("submitForm", (submitButtonId, formContainer,options = {}) => {
+    setFocus(submitButtonId, formContainer);
+    cy.get(`#${submitButtonId}-widget`).click();
+});
+
+Cypress.Commands.add("checkElementDisable", (elementId, isDisabled, formContainer,options = {}) => {
+    setFocus(elementId, formContainer);
+    if (isDisabled) {
+        cy.get(`#${elementId}`).find("input").should("have.attr", "disabled");
+    } else {
+        cy.get(`#${elementId}`).find("input").should("not.have.attr", "disabled");
     }
 });

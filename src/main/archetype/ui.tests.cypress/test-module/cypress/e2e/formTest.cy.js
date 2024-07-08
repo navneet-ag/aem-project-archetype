@@ -60,15 +60,17 @@ describe('AEM Forms contact us form', () => {
         const salaryInputId = "numberinput-6de71944e2";
         const employerDropDownId = "dropdown-7013aa122e";
         const profStatusId = "radiobutton-ffa3463928";
-        const additionalInputId = ""
+        const additionalInputId = "checkboxgroup-fbb7506960"
         // The hide and show behaviour was identified from the events property of the dropdown field in the model json.
         cy.chooseDropDown(employerDropDownId, "Yes", formContainer);
         cy.checkElementVisibility(salaryInputId, true, formContainer);
         cy.checkElementVisibility(profStatusId, true, formContainer);
+        cy.checkElementVisibility(additionalInputId, true, formContainer);
 
         cy.chooseDropDown(employerDropDownId, "No", formContainer);
         cy.checkElementVisibility(salaryInputId, false, formContainer);
         cy.checkElementVisibility(profStatusId, false, formContainer);
+        cy.checkElementVisibility(additionalInputId, false, formContainer);
 
     });
 
@@ -92,7 +94,7 @@ describe('AEM Forms contact us form', () => {
         cy.clickCheckBoxGroup(additionalInputId, 1, formContainer);
         cy.clickRadioButton(profStatusId, 0, formContainer);
         cy.clickCheckBox(receiveUpdatesId, formContainer);
-        cy.get(`#submit-5522a1cf83-widget`).click()
+        cy.submitForm("submit-5522a1cf83", formContainer);
         cy.wait('@afSubmission',).then(({ response}) => {
             expect(response.statusCode).to.equal(200);
             expect(response.body).to.be.not.null;
