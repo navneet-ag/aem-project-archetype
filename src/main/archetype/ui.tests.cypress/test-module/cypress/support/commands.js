@@ -160,7 +160,7 @@ Cypress.Commands.add("login", (pagePath, failurehandler = () => {}) => {
 });
 
 Cypress.Commands.add("openPage", (pagePath, options = {}) => {
-    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : 'http://localhost:4503';
+    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : 'http://localhost:4502';
     let path = ((contextPath && !pagePath.startsWith(contextPath)) ? `${contextPath}${pagePath.startsWith('/') ? '' : '/'}${pagePath}` : pagePath);
     if (!options.noLogin) {
         // getting status 403 intermittently, just ignore it
@@ -178,7 +178,7 @@ Cypress.Commands.add("openPage", (pagePath, options = {}) => {
 });
 
 Cypress.Commands.add("previewForm", (formPath, options = {}) => {
-    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : "";
+    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : "http://localhost:4503";
     let pagePath = contextPath ? `${contextPath}${formPath.startsWith('/') ? '' : '/'}${formPath}?wcmmode=disabled` : `${formPath}?wcmmode=disabled`;
     if (options?.params) {
         options.params.forEach((param) => pagePath += `&${param}`)
@@ -278,3 +278,42 @@ const waitForChildViewAddition = () => {
             return promise;
         });
 }
+
+const setFocus = (elementId, formContainer) => {
+    cy.get(`#${elementId}`).should('exist');
+    formContainer.setFocus(elementId);
+
+}
+Cypress.Commands.add("typeText", (elementId, text, formContainer,  options = {}) => {
+    setFocus(elementId, formContainer);
+    cy.get(`#${elementId}`).should('be.visible').type(text);
+});
+
+Cypress.Commands.add("chooseDropDown", (elementId, option, formContainer,  options = {}) => {
+    setFocus(elementId, formContainer);
+    cy.get(`#${elementId} select`).should("be.visible").select(option);
+});
+
+Cypress.Commands.add("clickRadioButton", (elementId, index, formContainer,  options = {}) => {
+    setFocus(elementId, formContainer);
+    cy.get(`#${elementId}`).find("input").eq(index).click();
+});
+
+Cypress.Commands.add("clickCheckBox", (elementId, formContainer,  options = {}) => {
+    setFocus(elementId, formContainer);
+    cy.get(`#${elementId}`).find("input").click();
+});
+
+Cypress.Commands.add("clickCheckBoxGroup", (elementId, index, formContainer,  options = {}) => {
+    setFocus(elementId, formContainer);
+    cy.get(`#${elementId}`).find("input").eq(index).click();
+});
+
+Cypress.Commands.add("checkElementVisibility", (elementId, isVisible, formContainer,options = {}) => {
+    setFocus(elementId, formContainer);
+    if (isVisible) {
+        cy.get(`#${elementId}`).should('be.visible');
+    } else {
+        cy.get(`#${elementId}`).should('not.be.visible');
+    }
+});

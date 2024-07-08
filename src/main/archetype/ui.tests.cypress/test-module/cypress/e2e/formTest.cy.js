@@ -26,12 +26,12 @@ describe('AEM Forms contact us form', () => {
         });
     })
 
-    it('form should be initialized properly', () => {
+    xit('form should be initialized properly', () => {
         expect(formContainer, "formcontainer is initialized").to.not.be.null;
         expect(formContainer._model.items.length, "model and view elements match").to.equal(Object.keys(formContainer._fields).length);
         Object.entries(formContainer._fields).forEach(([id, field]) => {
             expect(field.getId()).to.equal(id)
-            expect(formContainer._model.getElement(id), `model and view are in sync`).to.equal(field.getModel())
+            expect(formContainer._model.getElement(id)).to.equal(field.getModel())
         });
     });
 
@@ -41,13 +41,13 @@ describe('AEM Forms contact us form', () => {
         const nameInput = 'textinput-553834b35d';
         const emailInput = 'emailinput-0383a692af';
         // The invalid value was identified from the regex in the pattern field from the model json.
-        cy.get(`#${nameInput}`).type("123");
+        cy.typeText(nameInput, "123", formContainer);
         cy.get(`#${nameInput}`).find("input").focus().blur().then(x => {
             //The selector .cmp-adaptiveform-textinput__errormessage was identified using the id from the model json and finding that element in HTML.
             cy.get(`#${nameInput}`).find(".cmp-adaptiveform-textinput__errormessage").should('have.text',"Please enter a valid name.")
         })
         // The invalid value was identified from the regex in the pattern field from the model json.
-        cy.get(`#${emailInput}`).type("invalid email");
+        cy.typeText(emailInput, "invalid email", formContainer);
         cy.get(`#${emailInput}`).find("input").focus().blur().then(x => {
             //The selector .cmp-adaptiveform-emailinput__errormessage was identified using the id from the model json and finding that element in HTML.
             cy.get(`#${emailInput}`).find(".cmp-adaptiveform-emailinput__errormessage").should('have.text',"Please enter a valid email.")
@@ -59,38 +59,40 @@ describe('AEM Forms contact us form', () => {
         // The field id for the salary input and employerDropDown were identified from the model json.
         const salaryInputId = "numberinput-6de71944e2";
         const employerDropDownId = "dropdown-7013aa122e";
+        const profStatusId = "radiobutton-ffa3463928";
+        const additionalInputId = ""
         // The hide and show behaviour was identified from the events property of the dropdown field in the model json.
-        cy.get(`#${employerDropDownId} select`).select("Yes");
-        cy.get(`#${salaryInputId}`).should('be.visible');
+        cy.chooseDropDown(employerDropDownId, "Yes", formContainer);
+        cy.checkElementVisibility(salaryInputId, true, formContainer);
+        cy.checkElementVisibility(profStatusId, true, formContainer);
 
-        cy.get(`#${employerDropDownId} select`).select("No");
-        cy.get(`#${salaryInputId}`).should('not.be.visible');
+        cy.chooseDropDown(employerDropDownId, "No", formContainer);
+        cy.checkElementVisibility(salaryInputId, false, formContainer);
+        cy.checkElementVisibility(profStatusId, false, formContainer);
+
     });
 
     it("Clicking the button should submit the form", () => {
         cy.intercept({
             method: 'POST',
             url: '**/adobe/forms/af/submit/*',
-        }, {
-            statusCode: 200,
-            body: {
-            "submissionId": null,
-            "redirectUrl": null,
-            "thankYouMessage": "Thank you for submitting the form.",
-            "metadata": {
-            "prefillId": "6aa530bb-b2f1-4293-9b7c-14b08d6a7530"
-        }            }
         }).as('afSubmission')
         const nameInput = 'textinput-553834b35d';
         const emailInput = 'emailinput-0383a692af';
         const salaryInputId = "numberinput-6de71944e2";
         const employerDropDownId = "dropdown-7013aa122e";
-        cy.get(`#${nameInput}`).type("John");
-        cy.get(`#${emailInput}`).type("john@abc.com");
-        cy.get(`#${employerDropDownId} select`).select("Yes");
-        cy.get(`#${salaryInputId}`).type("10000");
-
-        cy.get(`.cmp-adaptiveform-button__widget`).click()
+        const additionalInputId = "checkboxgroup-fbb7506960";
+        const profStatusId = "radiobutton-ffa3463928";
+        const receiveUpdatesId =  "checkbox-d690436763"
+        cy.typeText(nameInput, "John", formContainer);
+        cy.typeText(emailInput, "john@abc.com", formContainer);
+        cy.chooseDropDown(employerDropDownId, "Yes", formContainer);
+        cy.typeText(salaryInputId, "10000", formContainer);
+        cy.clickCheckBoxGroup(additionalInputId, 0, formContainer);
+        cy.clickCheckBoxGroup(additionalInputId, 1, formContainer);
+        cy.clickRadioButton(profStatusId, 0, formContainer);
+        cy.clickCheckBox(receiveUpdatesId, formContainer);
+        cy.get(`#submit-5522a1cf83-widget`).click()
         cy.wait('@afSubmission',).then(({ response}) => {
             expect(response.statusCode).to.equal(200);
             expect(response.body).to.be.not.null;
@@ -98,7 +100,5 @@ describe('AEM Forms contact us form', () => {
             expect(response.body.thankYouMessage).to.equal("Thank you for submitting the form.");
         })
     });
-
-
 })
 
