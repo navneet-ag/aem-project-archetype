@@ -160,7 +160,7 @@ Cypress.Commands.add("login", (pagePath, failurehandler = () => {}) => {
 });
 
 Cypress.Commands.add("openPage", (pagePath, options = {}) => {
-    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : 'http://localhost:4503';
+    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : 'http://localhost:4502';
     let path = ((contextPath && !pagePath.startsWith(contextPath)) ? `${contextPath}${pagePath.startsWith('/') ? '' : '/'}${pagePath}` : pagePath);
     if (!options.noLogin) {
         // getting status 403 intermittently, just ignore it
@@ -178,7 +178,7 @@ Cypress.Commands.add("openPage", (pagePath, options = {}) => {
 });
 
 Cypress.Commands.add("previewForm", (formPath, options = {}) => {
-    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : "http://localhost:4503";
+    const contextPath = Cypress.env('crx.contextPath') ? Cypress.env('crx.contextPath') : "http://localhost:4502";
     let pagePath = contextPath ? `${contextPath}${formPath.startsWith('/') ? '' : '/'}${formPath}?wcmmode=disabled` : `${formPath}?wcmmode=disabled`;
     if (options?.params) {
         options.params.forEach((param) => pagePath += `&${param}`)
@@ -286,7 +286,10 @@ const setFocus = (elementId, formContainer) => {
 
 Cypress.Commands.add("typeText", (elementId, text, formContainer,  options = {}) => {
     setFocus(elementId, formContainer);
-    cy.get(`#${elementId}`).should('be.visible').type(text);
+    if (text!=''){
+        // cy.get(`#${elementId}`).should('be.visible').type(text);
+        cy.get(`#${elementId}`).find("input").clear().type(text).blur();
+    }
 });
 
 Cypress.Commands.add("chooseDropDown", (elementId, option, formContainer,  options = {}) => {
@@ -331,3 +334,20 @@ Cypress.Commands.add("checkElementDisable", (elementId, isDisabled, formContaine
         cy.get(`#${elementId}`).find("input").should("not.have.attr", "disabled");
     }
 });
+
+Cypress.Commands.add("checkElementReadOnly", (elementId, formContainer) => {
+    setFocus(elementId, formContainer);
+    cy.get(`#${elementId}`).should("have.attr", "data-cmp-readonly", "true");
+})
+
+Cypress.Commands.add("getAllPanelContainerIds", (formContainer) => {
+    console.log(formContainer._model);
+})
+
+Cypress.Commands.add("getRepeatedPanelCount", (panelId, formContainer) => {
+    // $parentDiv = cy.get(`#${panelId}`).parent().parent().parent();
+    // panelType = formContainer._fields[panelId]._model[":type"]
+    // const parentId = $parentDiv.attr('id');
+    // const children = formContainer._fields[parentId].children;
+    // return children.length.filter((e) => e._model[":type"] === panelType).length;
+})
